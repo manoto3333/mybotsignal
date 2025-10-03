@@ -1,0 +1,89 @@
+import os
+import requests
+import time
+import asyncio
+from telegram import Bot
+import logging
+import random
+
+# تنظیمات
+BOT_TOKEN = "توکن_ربات_خودت"  # از @BotFather
+CHAT_ID = "آیدی_چت_شما"      # از @userinfobot
+
+# تنظیم لاگ
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
+bot = Bot(token=BOT_TOKEN)
+
+async def send_alert(signal, k, d):
+    """ارسال آلارم به تلگرام"""
+    if signal == "BUY":
+        message = f"🟢 سیگنال خرید\nXAUUSD تایم ۵ دقیقه\nاستوکاستیک اشباع فروش\nK: {k:.1f} - D: {d:.1f}"
+    elif signal == "SELL":
+        message = f"🔴 سیگنال فروش\nXAUUSD تایم ۵ دقیقه\nاستوکاستیک اشباع خرید\nK: {k:.1f} - D: {d:.1f}"
+    else:
+        return False
+    
+    try:
+        await bot.send_message(chat_id=CHAT_ID, text=message)
+        logger.info(f"آلارم ارسال شد: {signal}")
+        return True
+    except Exception as e:
+        logger.error(f"خطا در ارسال آلارم: {e}")
+        return False
+
+async def send_start_message():
+    """ارسال پیام شروع"""
+    try:
+        await bot.send_message(
+            chat_id=CHAT_ID, 
+            text="🚀 ربات مانیتورینگ طلا فعال شد\nتایم‌فریم: ۵ دقیقه\nاندیکاتور: Stochastic"
+        )
+    except Exception as e:
+        logger.error(f"خطا در ارسال پیام شروع: {e}")
+
+def check_stochastic_signal():
+    """بررسی سیگنال استوکاستیک"""
+    # برای دمو، از داده‌های نمونه استفاده می‌کنیم
+    k = random.randint(0, 100)
+    d = random.randint(0, 100)
+    
+    signal = None
+    if k <= 20 and d <= 25:  # اشباع فروش
+        signal = "BUY"
+        logger.info(f"سیگنال خرید - K: {k}, D: {d}")
+    elif k >= 80 and d >= 75:  # اشباع خرید
+        signal = "SELL" 
+        logger.info(f"سیگنال فروش - K: {k}, D: {d}")
+    else:
+        logger.info(f"هیچ سیگنالی - K: {k}, D: {d}")
+    
+    return signal, k, d
+
+async def main():
+    """تابع اصلی"""
+    logger.info("🤖 ربات مانیتورینگ طلا شروع به کار کرد")
+    
+    # ارسال پیام شروع
+    await send_start_message()
+    
+    # حلقه اصلی
+    while True:
+        try:
+            signal, k, d = check_stochastic_signal()
+            
+            if signal:
+                await send_alert(signal, k, d)
+            
+            # منتظر ۱ دقیقه بمان (برای تست)
+            logger.info("⏳ منتظر چک بعدی...")
+            await asyncio.sleep(60)
+            
+        except Exception as e:
+            logger.error(f"خطا در حلقه اصلی: {e}")
+            await asyncio.sleep(30)
+
+if __name__ == "__main__":
+    # اجرای ربات
+    asyncio.run(main())
